@@ -1,0 +1,3 @@
+# Dependencies 
+
+node-red-dashboard
