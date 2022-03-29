@@ -1,2 +1,2 @@
-# ACIS
-ACIS : an open-source Autonomous Cell Imaging Station  for high throughput microalgae characterisation.
+# AMWIS
+AMWIS : an open-source Autonomous MultiWell Imaging Station
