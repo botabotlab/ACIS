@@ -117,6 +117,116 @@ To send a command to the microscope, the user must publish the payload containin
 If the user does not want to use a MQTT connection, our microscope can be completely controlled using a serial communication. Simply connect the signle board computer to the 3D printer using an usb cable and replace the MQTT node with a Serial out node (by installing the "node-red-node-serialport" node) and select the com port (e.g. /dev/ttyUSB0) and baud rate (115200). Since the commands sent have the same structure as GCODE commands, no software modification is necessary. The same applies to the LED array, which can be connected to the Jetson nano via USB and driven via serial.
 
 
+# Control
+
+The control of the machine can be done in three different ways:
+
+-   Manual remote control by sending messages in MQTT using the software/programming language chosen by the user
+-   Manual control from the Node-RED graphical interface
+-   Automatic control using a JSON config file
+
+## MQTT Custom control
+
+The two following examples of topics "**microscope/01/move**" and "**microscope/01/light**" manage respectively the microscope and the lighting system thanks to the MQTT Custom control.
+
+The commands sent to the topic "microscope/01/move" must have exactly the same structure as GCODE commands. 
+
+|CMD|Description  |
+|--|--|
+| M17 | Enable stepper motors |
+|M18 | Disable stepper motors|
+|M112 | Emergency stop|
+|M114 | Get current position|
+|G28 | Home|
+|G90 | Absolute positioning|
+|G91 | Relative positioning|
+|G1Axis[X/Y/Z] Position(mm) Feed(optional) | Movement (Ex : G1 X10 Y20 Z30)|
+    
+*Frequently used GCODE commands*
+
+## Graphical user interface
+
+Once the Node-RED server is launched and the provided flow is deployed, the user can go to the address **http://server.ip:1880/ui** using a smartphone or computer and to access the Node-RED GUI.
+
+*Graphical control interface via Node-RED composed of 5 panels (debug cam, light, control, plate and cam). The first panel (A) allows access to the security camera (Cam) to remotely view the machine to ensure it is working properly or to access the microscope image (Microscope) to observe the samples. The second panel allows to control the light either by choosing a color with the color picker (B) or by manually entering the RGB values (C). The control panel (D) allows you to manually move the camera on its 3 axes and returns the current position of the camera. The flat menu (E) allows you to move the camera to pre-programmed positions or to choose which well to light. The "SP" (safe position) button sends the camera to the upper right corner of the robot and advances the plate towards the user, thus facilitating the installation of multi-well plates, while the "LP" (last position) button returns the camera to its previous position (in case the user accidentally moves the camera). The panel (F) allows you to name the images. If several images are captured, the name will automatically be changed by adding the number of the photo (Iter). Finally, panel (G) allows you to perform autofocus and also to program the taking of multiple images separated by a defined delay.*
+
+The camera can be started on the "**Developper camera**" menu. 
+
+*The "Create virtual Cam" button allows to use “v4l2loopback” to create virtual cameras that will be used by different capture, image analysis, autofocus or debugging programs in HDMI or via IP stream. The use of virtual cameras is necessary because several programs cannot access the same camera at the same time. The second button allows to launch motion which will create an IP stream allowing to access the images remotely in the graphical interface. The button "copy usb webcam" will launch “ffmpeg” which will clone the physical camera in the different virtual cameras. The buttons CAM LCD ON and OFF allow the microscope image display or hiding through HDMI. Analyze ON and OFF display the image analysis (counting and size measurement) in real time on the HDMI output . Finally, the WB lock button and the WB slider allow to lock the white balance to a fixed value defined by the user. When the system is functional the 3 menus should be green.*
+
+This graphical interface allows a quick and manual observation, capture and analysis of one or more samples. A typical use would be to place different samples in multi-well plates, turn on the microscope, initialize the cameras, send the camera to "**Safepos**", place the plates on the bed, choose the illumination color and observe the desired samples. This system is faster than a regular microscope using a slide/coverslip system. 
+
+## Automation
+
+Many situations may require the capture of a large number of images (capture of several plates in a row) or need to be done over a long period of time (real time monitoring of a culture). As manually preparing and analyzing the samples is not feasible in this case, we have developed an automation system. This system allows to automate all the actions available on the graphical interface based on a JSON structure that is both intuitive and flexible. The user can thus define the sequence name, the wells to fill (if filling is desired) and the need to purge the circuit or not (to avoid contamination if the time between two samples is high), the wells to capture (if capturing is desired) and the light (color and intensity) corresponding to each well and the time between two samplings or captures.
+
+JSON structure :
+
+	{  
+	"name" : "Name of the experiment",  
+	"pos" : [ [X1 (0-5) ,Y1(0-3)] ],  
+	"light": [ [R(0-255) , G(0-255) , B(0-255), W(0-255)] ],  
+	"delay":[(s)],  
+	"capture":true-false,  
+	"sampling":true-false,  
+	"volume":[(ml)]  
+	"trash":true-false  
+	}
+
+The order of the wells can be defined by the user and not all wells have to be used ; it is possible to fill a complete plate or just a column. The light can be different between each well. To do this it is imperative that the "light" array has exactly the same length as the "pos" array. If the same color intensity should be used for all wells it is possible to enter only one light value in "light" and the system will automatically apply the light to all wells.
+
+It is not mandatory to capture images ; the machine can for example be used to fill multi-well plates with samples. To do so, you just have to set the "capture" key to false. The following JSON allows to fill 1 multiwell plate with a volume of 2ml (this procedure takes about 2 minutes for 12 wells). Capturing images alone without taking a sample is also possible ; the "capture" property must be set to true.
+
+Demo script to fill the plate 1 with samples of 1ml : 
+
+	{
+	"name" : "Fill plate 1",
+	"pos":[
+	[0,0],[1,0],[2,0],
+	[0,1],[1,1],[2,1],
+	[0,2],[1,2],[2,2],
+	[0,3],[1,3],[2,3]
+	],
+	"sampling":true,
+	"volume" : [1]
+	} 
+
+Demo script to capture the plate 1 with a white light of 100% :
+
+	{
+	"name" : "Capture plate 1",
+	"pos":[
+	[0,0],[1,0],[2,0],
+	[0,1],[1,1],[2,1],
+	[0,2],[1,2],[2,2],
+	[0,3],[1,3],[2,3]
+	],
+	"capture":true,
+	"light":[[0,0,0,255]]
+	}
+
+### Example
+
+The following example describes the most complex measurement sequence currently achievable with the machine consisting in reading three samples with different parameters. The robot will automatically fill the wells with three different volumes (1ml 2ml and 3ml) while purging the silicone tube between two samples. Each sample will be observed with a different color (red, green and blue) and intensity (100%, 50% and 25%) and the time between two measurements is set to 30 seconds for the first sample sample and 1 minute for the second one : 
+
+	{
+	"name" : "DemoSeq", 
+	"pos" : [[0,0],[2,3],[3,0]], 
+	"light" : [[255,0,0,0],[0,255,0,0],[0,0,255,0]], 
+	"delay" : [30,60,0] , 
+	"sampling" : true, 
+	"volume" : [1,2,3], 
+	"trash" : true, 
+	"capture" : true
+	}
+
+## Safety
+
+- The system uses a 220V power supply so the connections must be properly isolated. 
+- The motherboard as well as the single board computer and the lighting system must be kept away from humidity or any conductive elements that could cause a short circuit. 
+- The 3 axes of movement must not be obstructed as most 3D printers do not have built-in stall detection (meaning that the motors can be forced even if they are blocked) and the limit switches must be accessible during calibration. 
+- The user must always check that the magnets are well aligned when a tool is placed on the machine, taking care not to get his fingers caught when installing the tools as the magnets are relatively powerful.
+
 
 
 
