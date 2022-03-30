@@ -1,5 +1,5 @@
-# AMWIS
-AMWIS : an open-source Autonomous MultiWell Imaging Station
+# AMIS
+AMIS : an open-source Autonomous MultiWell Imaging Station
 
 <img src="https://github.com/botabotlab/AMWIS/blob/main/img/main.jpg" width="100%">
 
