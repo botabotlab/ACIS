@@ -1,0 +1,8 @@
+{"SSID" : "SSID",
+"Pass" : "PASSWORD",
+"MQTT_Server" : "BROKER IP",
+"MQTT_User" : "USERNAME",
+"MQTT_Pass" : "PASSWORD",
+"Topic_LED" : "botabot/light/microscope/LED/01",
+"Topic_ALL" : "botabot/light/microscope/ALL/01",
+"HostName" : "Wemos_SK6812_Microscope_01"}

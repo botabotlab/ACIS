@@ -1,0 +1,8 @@
+{"SSID" : "SSID",
+"Pass" : "PASSWORD",
+"MQTT_Server" : "BROKER IP",
+"MQTT_User" : "USERNAME",
+"MQTT_Pass" : "PASSWORD",
+"Topic_UP" : "GcodeUP",
+"Topic_DOWN" : "GcodeDOWN",
+"HostName" : "Wemos_Microscope_GCODE_MQTT_01"}
